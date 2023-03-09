@@ -1,185 +1,85 @@
 <!--这是一个note-->
 
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>爱心</title>
-  <style>
-    *{margin:0; padding:0;}
-    body{ background-color: #1E1E1E;     }
-  </style>
-</head>
-<body>
- 
-  <canvas id="drawHeart"></canvas>
- 
-  <script>
-    var hearts = [];
-    var canvas = document.getElementById('drawHeart');
-    var wW = window.innerWidth;
-    var wH = window.innerHeight;
-    // 创建画布
-    var ctx = canvas.getContext('2d');
-    // 创建图片对象
-    var heartImage = new Image();
-    heartImage.src = 'https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fgss0.baidu.com%2F-vo3dSag_xI4khGko9WTAnF6hhy%2Fzhidao%2Fpic%2Fitem%2Fb21bb051f81986186b44770a48ed2e738bd4e639.jpg&refer=http%3A%2F%2Fgss0.baidu.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=jpeg?sec=1641477598&t=2165eac282333ad148983fb776b59f13';
-    var num = 100;
- 
-    init();
- 
-    window.addEventListener('resize', function(){
-       wW = window.innerWidth;
-       wH = window.innerHeight;
-    });
-    // 初始化画布大小
-    function init(){
-      canvas.width = wW;
-      canvas.height = wH;
-      for(var i = 0; i < num; i++){
-        hearts.push(new Heart(i%5));
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>三个球体在空间中的运动</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
       }
-      requestAnimationFrame(render);
-    }
- 
-    function getColor(){
-      var val = Math.random() * 10;
-      if(val > 0 && val <= 1){
-        return '#00f';
-      } else if(val > 1 && val <= 2){
-        return '#f00';
-      } else if(val > 2 && val <= 3){
-        return '#0f0';
-      } else if(val > 3 && val <= 4){
-        return '#368';
-      } else if(val > 4 && val <= 5){
-        return '#666';
-      } else if(val > 5 && val <= 6){
-        return '#333';
-      } else if(val > 6 && val <= 7){
-        return '#f50';
-      } else if(val > 7 && val <= 8){
-        return '#e96d5b';
-      } else if(val > 8 && val <= 9){
-        return '#5be9e9';
-      } else {
-        return '#d41d50';
+      canvas {
+        width: 100%;
+        height: 100%;
       }
-    }
- 
-    function getText(){
-      var val = Math.random() * 10;
-      if(val > 1 && val <= 3){
-        return '爱你一辈子';
-      } else if(val > 3 && val <= 5){
-        return '感谢你';
-      } else if(val > 5 && val <= 8){
-        return '喜欢你';
-      } else{
-        return 'I Love You';
+    </style>
+  </head>
+  <body>
+    <script src="three.min.js"></script>
+    <script>
+      // 设置场景
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+      camera.position.z = 50;
+      var renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      // 创建球体
+      var geometry = new THREE.SphereGeometry(1, 32, 32);
+      var material = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+      });
+      var sphere1 = new THREE.Mesh(geometry, material);
+      sphere1.position.set(0, 0, 0);
+      scene.add(sphere1);
+
+      var sphere2 = new THREE.Mesh(geometry, material);
+      sphere2.position.set(10, 0, 0);
+      scene.add(sphere2);
+
+      var sphere3 = new THREE.Mesh(geometry, material);
+      sphere3.position.set(0, 10, 0);
+      scene.add(sphere3);
+
+      // 计算引力并更新位置
+      var G = 1;
+      var timeStep = 0.01;
+      function calculateGravity(sphere1, sphere2) {
+        var distance = sphere1.position.distanceTo(sphere2.position);
+        var force = (G * sphere1.mass * sphere2.mass) / (distance * distance);
+        var direction = sphere2.position
+          .clone()
+          .sub(sphere1.position)
+          .normalize();
+        var gravity = direction.multiplyScalar(force);
+        sphere1.velocity.add(gravity.divideScalar(sphere1.mass));
       }
-    }
- 
-    function Heart(type){
-      this.type = type;
-      // 初始化生成范围
-      this.x = Math.random() * wW;
-      this.y = Math.random() * wH;
- 
-      this.opacity = Math.random() * .5 + .5;
- 
-      // 偏移量
-      this.vel = {
-        x: (Math.random() - .5) * 5,
-        y: (Math.random() - .5) * 5
+      function updatePosition(sphere) {
+        sphere.position.add(sphere.velocity.multiplyScalar(timeStep));
       }
- 
-      this.initialW = wW * .5;
-      this.initialH = wH * .5;
-      // 缩放比例
-      this.targetScale = Math.random() * .15 + .02; // 最小0.02
-      this.scale = Math.random() * this.targetScale;
- 
-      // 文字位置
-      this.fx = Math.random() * wW;
-      this.fy = Math.random() * wH;
-      this.fs = Math.random() * 10;
-      this.text = getText();
- 
-      this.fvel = {
-        x: (Math.random() - .5) * 5,
-        y: (Math.random() - .5) * 5,
-        f: (Math.random() - .5) * 2
+
+      // 渲染函数
+      function render() {
+        requestAnimationFrame(render);
+        calculateGravity(sphere1, sphere2);
+        calculateGravity(sphere1, sphere3);
+        calculateGravity(sphere2, sphere3);
+        updatePosition(sphere1);
+        updatePosition(sphere2);
+        updatePosition(sphere3);
+        renderer.render(scene, camera);
       }
-    }
- 
-    Heart.prototype.draw = function(){
-      ctx.save();
-      ctx.globalAlpha = this.opacity;
-      ctx.drawImage(heartImage, this.x, this.y, this.width, this.height);
-      ctx.scale(this.scale + 1, this.scale + 1);
-        if(!this.type){
-          // 设置文字属性
-        ctx.fillStyle = getColor();
-          ctx.font = 'italic ' + this.fs + 'px sans-serif';
-          // 填充字符串
-          ctx.fillText(this.text, this.fx, this.fy);
-        }
-      ctx.restore();
-    }
-    Heart.prototype.update = function(){
-      this.x += this.vel.x;
-      this.y += this.vel.y;
- 
-      if(this.x - this.width > wW || this.x + this.width < 0){
-        // 重新初始化位置
-        this.scale = 0;
-        this.x = Math.random() * wW;
-        this.y = Math.random() * wH;
-      }
-      if(this.y - this.height > wH || this.y + this.height < 0){
-        // 重新初始化位置
-        this.scale = 0;
-        this.x = Math.random() * wW;
-        this.y = Math.random() * wH;
-      }
- 
-      // 放大
-      this.scale += (this.targetScale - this.scale) * .1;
-      this.height = this.scale * this.initialH;
-      this.width = this.height * 1.4;
- 
-      // -----文字-----
-      this.fx += this.fvel.x;
-      this.fy += this.fvel.y;
-      this.fs += this.fvel.f;
- 
-      if(this.fs > 50){
-        this.fs = 2;
-      }
- 
-      if(this.fx - this.fs > wW || this.fx + this.fs < 0){
-        // 重新初始化位置
-        this.fx = Math.random() * wW;
-        this.fy = Math.random() * wH;
-      }
-      if(this.fy - this.fs > wH || this.fy + this.fs < 0){
-        // 重新初始化位置
-        this.fx = Math.random() * wW;
-        this.fy = Math.random() * wH;
-      }
-    }
- 
-    function render(){
-      ctx.clearRect(0, 0, wW, wH);
-      for(var i = 0; i < hearts.length; i++){
-        hearts[i].draw();
-        hearts[i].update();
-      }
-      requestAnimationFrame(render);
-    }
-  </script>
-</body>
+      render();
+    </script>
+  </body>
 </html>
 
 
